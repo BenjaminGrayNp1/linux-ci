@@ -1238,6 +1238,9 @@ static inline void restore_sprs(struct thread_struct *old_thread,
 	if (cpu_has_feature(CPU_FTR_ARCH_31) &&
 	    dexcr_thread_val(old_thread) != dexcr_thread_val(new_thread))
 		mtspr(SPRN_DEXCR, dexcr_thread_val(new_thread));
+
+	if (cpu_has_feature(CPU_FTR_DEXCR_NPHIE))
+		mtspr(SPRN_HASHKEYR, new_thread->hashkeyr);
 #endif
 
 }
@@ -1963,6 +1966,11 @@ void start_thread(struct pt_regs *regs, unsigned long start, unsigned long sp)
 #ifdef CONFIG_PPC_BOOK3S_64
 	if (cpu_has_feature(CPU_FTR_ARCH_31))
 		mtspr(SPRN_DEXCR, dexcr_thread_val(&current->thread));
+
+	if (cpu_has_feature(CPU_FTR_DEXCR_NPHIE)) {
+		current->thread.hashkeyr = get_random_long();
+		mtspr(SPRN_HASHKEYR, current->thread.hashkeyr);
+	}
 #endif
 }
 EXPORT_SYMBOL(start_thread);

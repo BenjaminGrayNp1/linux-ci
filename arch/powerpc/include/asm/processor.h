@@ -267,6 +267,7 @@ struct thread_struct {
 	unsigned long   sier3;
 	unsigned long	dexcr_ovrd;
 	unsigned long	dexcr_mask;
+	unsigned long	hashkeyr;
 
 #endif
 };
