@@ -340,6 +340,14 @@ extern int set_endian(struct task_struct *tsk, unsigned int val);
 extern int get_unalign_ctl(struct task_struct *tsk, unsigned long adr);
 extern int set_unalign_ctl(struct task_struct *tsk, unsigned int val);
 
+#if CONFIG_PPC_BOOK3S_64
+
+#define PPC_SET_DEXCR_ASPECT(tsk, asp, val) set_dexcr_aspect((tsk), (asp), (val))
+
+int set_dexcr_aspect(struct task_struct *tsk, unsigned int asp, unsigned int val);
+
+#endif
+
 extern void load_fp_state(struct thread_fp_state *fp);
 extern void store_fp_state(struct thread_fp_state *fp);
 extern void load_vr_state(struct thread_vr_state *vr);

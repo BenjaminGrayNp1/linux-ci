@@ -1,6 +1,7 @@
 #include <linux/cpu.h>
 #include <linux/irqflags.h>
 #include <linux/percpu.h>
+#include <linux/prctl.h>
 #include <linux/sysctl.h>
 #include <linux/types.h>
 #include <linux/capability.h>
@@ -53,6 +54,49 @@ static void update_dexcr_on_cpu(void *info)
 
 	dexcr = dexcr_thread_val(&current->thread);
 	mtspr(SPRN_DEXCR, dexcr);
+}
+
+/* Called from prctl interface: PR_PPC_SET_DEXCR_ASPECT */
+int set_dexcr_aspect(struct task_struct *tsk, unsigned int asp, unsigned int val)
+{
+	u64 mask = 0;
+	u64 data = 0;
+
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	if (!cpu_has_feature(CPU_FTR_ARCH_31))
+		return -EINVAL;
+
+	switch (val) {
+	case 0:
+	case 1:
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (!(asp & PR_PPC_DEXCR_ASPECT_ALL) ||
+	    (asp & ~PR_PPC_DEXCR_ASPECT_ALL))
+		return -EINVAL;
+
+	if (asp & PR_PPC_DEXCR_ASPECT_SBHE) {
+		if (!cpu_has_feature(CPU_FTR_DEXCR_SBHE)) {
+			pr_warn("DEXCR[SBHE] not implemented\n");
+			return -EINVAL;
+		}
+
+		mask |= (u64)1 << DEXCR_PROn_SH(DEXCR_ASPECT_SBHE);
+		data |= (u64)val << DEXCR_PROn_SH(DEXCR_ASPECT_SBHE);
+	}
+
+	tsk->thread.dexcr_ovrd &= ~mask;
+	tsk->thread.dexcr_ovrd |= data;
+	tsk->thread.dexcr_mask |= mask;
+
+	update_dexcr_on_cpu(NULL);
+
+	return 0;
 }
 
 #ifdef CONFIG_SYSCTL

@@ -284,4 +284,9 @@ struct prctl_mm_map {
 #define PR_SET_VMA		0x53564d41
 # define PR_SET_VMA_ANON_NAME		0
 
+/* Modify PPC DEXCR "aspect" control bits */
+#define PR_PPC_SET_DEXCR_ASPECT		65
+# define PR_PPC_DEXCR_ASPECT_SBHE	1
+# define PR_PPC_DEXCR_ASPECT_ALL	(PR_PPC_DEXCR_ASPECT_SBHE)
+
 #endif /* _LINUX_PRCTL_H */
