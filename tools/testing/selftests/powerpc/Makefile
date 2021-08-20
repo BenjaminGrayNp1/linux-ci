@@ -33,8 +33,9 @@ SUB_DIRS = alignment		\
 	   papr_attributes	\
 	   ptrace	\
 	   security	\
-	   mce	\
-	   rop
+	   mce		\
+	   rop		\
+	   dexcr
 
 endif
 
