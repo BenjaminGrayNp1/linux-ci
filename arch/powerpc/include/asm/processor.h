@@ -449,12 +449,18 @@ void *exit_vmx_ops(void *dest);
 #ifdef CONFIG_PPC_BOOK3S_64
 
 u64 dexcr_thread_val(struct thread_struct const *t);
+bool is_hashchk_trap(struct pt_regs const *regs);
 
 #else
 
 static inline u64 dexcr_thread_val(struct thread_struct const *t)
 {
 	return 0;
+}
+
+static inline bool is_hashchk_trap(struct pt_regs const *regs)
+{
+	return false;
 }
 
 #endif
