@@ -265,6 +265,8 @@ struct thread_struct {
 	unsigned long   mmcr3;
 	unsigned long   sier2;
 	unsigned long   sier3;
+	unsigned long	dexcr_ovrd;
+	unsigned long	dexcr_mask;
 
 #endif
 };
@@ -434,6 +436,19 @@ int enter_vmx_usercopy(void);
 int exit_vmx_usercopy(void);
 int enter_vmx_ops(void);
 void *exit_vmx_ops(void *dest);
+
+#ifdef CONFIG_PPC_BOOK3S_64
+
+u64 dexcr_thread_val(struct thread_struct const *t);
+
+#else
+
+static inline u64 dexcr_thread_val(struct thread_struct const *t)
+{
+	return 0;
+}
+
+#endif
 
 #endif /* __KERNEL__ */
 #endif /* __ASSEMBLY__ */

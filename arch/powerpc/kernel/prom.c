@@ -177,6 +177,10 @@ static struct ibm_pa_feature {
 	  .cpu_user_ftrs2 = PPC_FEATURE2_HTM_COMP | PPC_FEATURE2_HTM_NOSC_COMP },
 
 	{ .pabyte = 64, .pabit = 0, .cpu_features = CPU_FTR_DAWR1 },
+	{ .pabyte = 68, .pabit = 0, .cpu_features = CPU_FTR_DEXCR_SBHE },
+	{ .pabyte = 68, .pabit = 3, .cpu_features = CPU_FTR_DEXCR_IBRTPD },
+	{ .pabyte = 68, .pabit = 4, .cpu_features = CPU_FTR_DEXCR_SRAPD },
+	{ .pabyte = 68, .pabit = 5, .cpu_features = CPU_FTR_DEXCR_NPHIE },
 };
 
 static void __init scan_features(unsigned long node, const unsigned char *ftrs,
