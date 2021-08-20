@@ -9,6 +9,8 @@
 /* XXX all of these defines maybe don't belong here */
 #define DEXCR_PROn_SH(aspect)	(63 - (32 + (aspect))) /* Problem State (Userspace) */
 #define DEXCR_ASPECT_SBHE	0 /* Speculative Branch Hint Enable */
+#define DEXCR_ASPECT_IBRTPD	3 /* Indirect Branch Recurrent Target Prediction Disable */
+#define DEXCR_ASPECT_SRAPD	4 /* Subroutine Return Address Prediction Disable */
 
 DEFINE_PER_CPU(u64, cpu_dexcr);
 
@@ -88,6 +90,26 @@ int set_dexcr_aspect(struct task_struct *tsk, unsigned int asp, unsigned int val
 
 		mask |= (u64)1 << DEXCR_PROn_SH(DEXCR_ASPECT_SBHE);
 		data |= (u64)val << DEXCR_PROn_SH(DEXCR_ASPECT_SBHE);
+	}
+
+	if (asp & PR_PPC_DEXCR_ASPECT_SRAPD) {
+		if (!cpu_has_feature(CPU_FTR_DEXCR_SRAPD)) {
+			pr_warn("DEXCR[SRAPD] not implemented\n");
+			return -EINVAL;
+		}
+
+		mask |= (u64)1 << DEXCR_PROn_SH(DEXCR_ASPECT_SRAPD);
+		data |= (u64)val << DEXCR_PROn_SH(DEXCR_ASPECT_SRAPD);
+	}
+
+	if (asp & PR_PPC_DEXCR_ASPECT_IBRTPD) {
+		if (!cpu_has_feature(CPU_FTR_DEXCR_IBRTPD)) {
+			pr_warn("DEXCR[IBRTPD] not implemented\n");
+			return -EINVAL;
+		}
+
+		mask |= (u64)1 << DEXCR_PROn_SH(DEXCR_ASPECT_IBRTPD);
+		data |= (u64)val << DEXCR_PROn_SH(DEXCR_ASPECT_IBRTPD);
 	}
 
 	tsk->thread.dexcr_ovrd &= ~mask;

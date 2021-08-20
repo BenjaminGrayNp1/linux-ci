@@ -286,7 +286,11 @@ struct prctl_mm_map {
 
 /* Modify PPC DEXCR "aspect" control bits */
 #define PR_PPC_SET_DEXCR_ASPECT		65
-# define PR_PPC_DEXCR_ASPECT_SBHE	1
-# define PR_PPC_DEXCR_ASPECT_ALL	(PR_PPC_DEXCR_ASPECT_SBHE)
+# define PR_PPC_DEXCR_ASPECT_SBHE	(1 << 0)
+# define PR_PPC_DEXCR_ASPECT_IBRTPD	(1 << 1)
+# define PR_PPC_DEXCR_ASPECT_SRAPD	(1 << 2)
+# define PR_PPC_DEXCR_ASPECT_ALL	(PR_PPC_DEXCR_ASPECT_SBHE	\
+					| PR_PPC_DEXCR_ASPECT_SRAPD	\
+					| PR_PPC_DEXCR_ASPECT_IBRTPD)
 
 #endif /* _LINUX_PRCTL_H */
