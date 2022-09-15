@@ -1036,6 +1036,18 @@ config PPC_RTAS_FILTER
 	  Say Y unless you know what you are doing and the filter is causing
 	  problems for you.
 
+config PPC_STATIC_CALL_KUNIT_TEST
+	tristate "KUnit tests for static calls"
+	default KUNIT_ALL_TESTS
+	depends on HAVE_STATIC_CALL && KUNIT && m
+	help
+	  Tests for static calls across all combinations of caller/trampoline/target
+	  being kernel/module. On ELF ABI V2 the tests check the TOC is kept consistent.
+
+	  Must be built as a module and loaded at runtime to ensure the module has
+	  a different TOC to the kernel and make it likely that non-direct branch
+	  path of the trampoline is tested.
+
 endmenu
 
 config ISA_DMA_API

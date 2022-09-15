@@ -153,3 +153,56 @@ out:
 		panic("%s: patching failed %pS at %pS\n", __func__, func, tramp);
 }
 EXPORT_SYMBOL_GPL(arch_static_call_transform);
+
+
+#if IS_MODULE(CONFIG_PPC_STATIC_CALL_KUNIT_TEST)
+
+#include "static_call_test.h"
+
+int ppc_sc_kernel_target_1(struct kunit *test)
+{
+	toc_fixup(test);
+	return 1;
+}
+
+int ppc_sc_kernel_target_2(struct kunit *test)
+{
+	toc_fixup(test);
+	return 2;
+}
+
+DEFINE_STATIC_CALL(ppc_sc_kernel, ppc_sc_kernel_target_1);
+
+int ppc_sc_kernel_call(struct kunit *test)
+{
+	return PROTECTED_SC(test, int, static_call(ppc_sc_kernel)(test));
+}
+
+int ppc_sc_kernel_call_indirect(struct kunit *test, int (*fn)(struct kunit *test))
+{
+	return PROTECTED_SC(test, int, fn(test));
+}
+
+long ppc_sc_kernel_target_big(struct kunit *test, long a, long b, long c, long d,
+			      long e, long f, long g, long h, long i)
+{
+	toc_fixup(test);
+	KUNIT_EXPECT_EQ(test, a, b);
+	KUNIT_EXPECT_EQ(test, a, c);
+	KUNIT_EXPECT_EQ(test, a, d);
+	KUNIT_EXPECT_EQ(test, a, e);
+	KUNIT_EXPECT_EQ(test, a, f);
+	KUNIT_EXPECT_EQ(test, a, g);
+	KUNIT_EXPECT_EQ(test, a, h);
+	KUNIT_EXPECT_EQ(test, a, i);
+	return ~a;
+}
+
+EXPORT_SYMBOL_GPL(ppc_sc_kernel_target_1);
+EXPORT_SYMBOL_GPL(ppc_sc_kernel_target_2);
+EXPORT_SYMBOL_GPL(ppc_sc_kernel_target_big);
+EXPORT_STATIC_CALL_GPL(ppc_sc_kernel);
+EXPORT_SYMBOL_GPL(ppc_sc_kernel_call);
+EXPORT_SYMBOL_GPL(ppc_sc_kernel_call_indirect);
+
+#endif /* IS_MODULE(CONFIG_PPC_STATIC_CALL_KUNIT_TEST) */
