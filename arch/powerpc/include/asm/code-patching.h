@@ -72,7 +72,36 @@ static inline int create_branch(ppc_inst_t *instr, const u32 *addr,
 int create_cond_branch(ppc_inst_t *instr, const u32 *addr,
 		       unsigned long target, int flags);
 int patch_branch(u32 *addr, unsigned long target, int flags);
+
+/* patch_uint and patch_ulong must only be called on addresses where the patch
+ * does not cross a cacheline, otherwise it may not be flushed properly and
+ * mixes of new and stale data may be observed.
+ *
+ * patch_instruction and other instruction patchers automatically satisfy this
+ * requirement due to instruction alignment requirements.
+ */
+
+int patch_uint(void *addr, unsigned int val);
+
+#ifdef CONFIG_PPC64
+
+int patch_ulong(void *addr, unsigned long val);
 int patch_instruction(u32 *addr, ppc_inst_t instr);
+
+#else
+
+static inline int patch_ulong(void *addr, unsigned long val)
+{
+	return patch_uint(addr, val);
+}
+
+static inline int patch_instruction(u32 *addr, ppc_inst_t instr)
+{
+	return patch_uint(addr, ppc_inst_val(instr));
+}
+
+#endif
+
 int raw_patch_instruction(u32 *addr, ppc_inst_t instr);
 
 static inline unsigned long patch_site_addr(s32 *site)

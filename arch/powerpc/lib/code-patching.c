@@ -15,20 +15,24 @@
 #include <asm/code-patching.h>
 #include <asm/inst.h>
 
-static int __patch_instruction(u32 *exec_addr, ppc_inst_t instr, u32 *patch_addr)
+static int __patch_memory(void *patch_addr, unsigned long val, void *exec_addr,
+			  bool is_dword)
 {
-	if (!ppc_inst_prefixed(instr)) {
-		u32 val = ppc_inst_val(instr);
+	/* Prefixed instruction may cross cacheline if cacheline smaller than 64 bytes */
+	BUILD_BUG_ON(IS_ENABLED(CONFIG_PPC64) && L1_CACHE_BYTES < 64);
 
-		__put_kernel_nofault(patch_addr, &val, u32, failed);
-	} else {
-		u64 val = ppc_inst_as_ulong(instr);
-
+	if (IS_ENABLED(CONFIG_PPC64) && unlikely(is_dword))
 		__put_kernel_nofault(patch_addr, &val, u64, failed);
-	}
+	else
+		__put_kernel_nofault(patch_addr, &val, u32, failed);
 
-	asm ("dcbst 0, %0; sync; icbi 0,%1; sync; isync" :: "r" (patch_addr),
-							    "r" (exec_addr));
+	/* Assume data is inside a single cacheline */
+	dcbst(patch_addr);
+	mb(); /* sync */
+	/* Flush on the EA that may be executed in case of a non-coherent icache */
+	icbi(exec_addr);
+	mb(); /* sync */
+	isync();
 
 	return 0;
 
@@ -38,7 +42,10 @@ failed:
 
 int raw_patch_instruction(u32 *addr, ppc_inst_t instr)
 {
-	return __patch_instruction(addr, instr, addr);
+	if (ppc_inst_prefixed(instr))
+		return __patch_memory(addr, ppc_inst_as_ulong(instr), addr, true);
+	else
+		return __patch_memory(addr, ppc_inst_val(instr), addr, false);
 }
 
 static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
@@ -149,7 +156,7 @@ static void unmap_patch_area(unsigned long addr)
 	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
 }
 
-static int __do_patch_instruction(u32 *addr, ppc_inst_t instr)
+static int __do_patch_memory(void *addr, unsigned long val, bool is_dword)
 {
 	int err;
 	u32 *patch_addr;
@@ -166,7 +173,7 @@ static int __do_patch_instruction(u32 *addr, ppc_inst_t instr)
 	if (radix_enabled())
 		asm volatile("ptesync": : :"memory");
 
-	err = __patch_instruction(addr, instr, patch_addr);
+	err = __patch_memory(patch_addr, val, addr, is_dword);
 
 	pte_clear(&init_mm, text_poke_addr, pte);
 	flush_tlb_kernel_range(text_poke_addr, text_poke_addr + PAGE_SIZE);
@@ -174,7 +181,7 @@ static int __do_patch_instruction(u32 *addr, ppc_inst_t instr)
 	return err;
 }
 
-int patch_instruction(u32 *addr, ppc_inst_t instr)
+static int do_patch_memory(void *addr, unsigned long val, bool is_dword)
 {
 	int err;
 	unsigned long flags;
@@ -186,15 +193,47 @@ int patch_instruction(u32 *addr, ppc_inst_t instr)
 	 */
 	if (!IS_ENABLED(CONFIG_STRICT_KERNEL_RWX) ||
 	    !static_branch_likely(&poking_init_done))
-		return raw_patch_instruction(addr, instr);
+		return __patch_memory(addr, val, addr, is_dword);
 
 	local_irq_save(flags);
-	err = __do_patch_instruction(addr, instr);
+	err = __do_patch_memory(addr, val, is_dword);
 	local_irq_restore(flags);
 
 	return err;
 }
-NOKPROBE_SYMBOL(patch_instruction);
+
+#ifdef CONFIG_PPC64
+
+int patch_uint(void *addr, unsigned int val)
+{
+	return do_patch_memory(addr, val, false);
+}
+NOKPROBE_SYMBOL(patch_uint)
+
+int patch_ulong(void *addr, unsigned long val)
+{
+	return do_patch_memory(addr, val, true);
+}
+NOKPROBE_SYMBOL(patch_ulong)
+
+int patch_instruction(u32 *addr, ppc_inst_t instr)
+{
+	if (ppc_inst_prefixed(instr))
+		return patch_ulong(addr, ppc_inst_as_ulong(instr));
+	else
+		return patch_uint(addr, ppc_inst_val(instr));
+}
+NOKPROBE_SYMBOL(patch_instruction)
+
+#else
+
+noinline int patch_uint(void *addr, unsigned int val)
+{
+	return do_patch_memory(addr, val, false);
+}
+NOKPROBE_SYMBOL(patch_uint)
+
+#endif
 
 int patch_branch(u32 *addr, unsigned long target, int flags)
 {
