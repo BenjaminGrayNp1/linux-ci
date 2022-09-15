@@ -141,6 +141,12 @@ static u32 ppc64_stub_insns[] = {
 	PPC_RAW_BCTR(),
 };
 
+#ifdef CONFIG_PPC64_ELF_ABI_V1
+#define PPC64_STUB_MTCTR_OFFSET 5
+#else
+#define PPC64_STUB_MTCTR_OFFSET 4
+#endif
+
 /* Count how many different 24-bit relocations (different symbol,
    different addend) */
 static unsigned int count_relocs(const Elf64_Rela *rela, unsigned int num)
@@ -426,6 +432,7 @@ static inline int create_stub(const Elf64_Shdr *sechdrs,
 			      struct module *me,
 			      const char *name)
 {
+	int err;
 	long reladdr;
 	func_desc_t desc;
 	int i;
@@ -438,6 +445,11 @@ static inline int create_stub(const Elf64_Shdr *sechdrs,
 				      ppc_inst(ppc64_stub_insns[i])))
 			return 0;
 	}
+
+	/* Replace indirect branch sequence with direct branch where possible */
+	err = patch_branch(&entry->jump[PPC64_STUB_MTCTR_OFFSET], addr, 0);
+	if (err && err != -ERANGE)
+		return 0;
 
 	/* Stub uses address relative to r2. */
 	reladdr = (unsigned long)entry - my_r2(sechdrs, me);
