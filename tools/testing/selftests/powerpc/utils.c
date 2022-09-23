@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <link.h>
+#include <math.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +24,89 @@
 #include <linux/limits.h>
 
 #include "utils.h"
+
+struct bench_stats
+{
+	unsigned long count;
+	double maximum;
+	double minimum;
+	double sum;
+	double mean;
+	double median;
+	double stdev;
+};
+
+int compare_double(const void* a, const void* b)
+{
+	return *(const double*)a - *(const double*)b > 0 ? 1 : -1;
+}
+
+struct bench_stats get_stats(const double *values, unsigned long count)
+{
+	struct bench_stats stats = {
+		.count = count,
+		.sum = 0.0,
+		.maximum = 0.0,
+		.minimum = 0.0,
+		.mean = 0.0,
+		.median = 0.0,
+		.stdev = 0.0,
+	};
+
+	if (count == 0)
+		return stats;
+
+	for (unsigned long i = 0; i < count; i++) {
+		stats.sum += values[i];
+	}
+
+	stats.mean = stats.sum / (double) count;
+
+	if (count == 1) {
+		stats.stdev = NAN;
+	} else {
+		for (size_t i = 0; i < count; i++) {
+			double diff = values[i] - stats.mean;
+			stats.stdev += diff * diff;
+		}
+		stats.stdev = stats.stdev / (double) (count - 1);
+	}
+
+	double *sorted = malloc(count * sizeof(double));
+	memcpy(sorted, values, count * sizeof(double));
+	qsort(sorted, count, sizeof(double), compare_double);
+
+	stats.median = sorted[count / 2];
+	stats.maximum = sorted[count - 1];
+	stats.minimum = sorted[0];
+
+	free(sorted);
+
+	return stats;
+}
+
+void print_stats(const double *values, unsigned long count)
+{
+	unsigned long i = 0;
+	for (; i + 6 < count; i += 6) {
+		printf("%12.6f  %12.6f  %12.6f  %12.6f  %12.6f  %12.6f\n", values[i], values[i + 1], values[i + 2], values[i + 3], values[i + 4], values[i + 5]);
+	}
+	for (; i < count; i++) {
+		printf("%12.6f  ", values[i]);
+	}
+	printf("\n");
+
+	struct bench_stats stats = get_stats(values, count);
+	printf("samples: %lu\n", stats.count);
+	printf("\n");
+	printf("    min: %.6f  (-%.6f, %.2f%%)\n", stats.minimum, stats.mean - stats.minimum, 100.0 * (stats.mean - stats.minimum) / stats.mean);
+	printf("   mean: %.6f\n", stats.mean);
+	printf(" median: %.6f\n", stats.median);
+	printf("    max: %.6f  (+%.6f, %.2f%%)\n", stats.maximum, stats.maximum - stats.mean, 100.0 * (stats.maximum - stats.mean) / stats.mean);
+	printf("\n");
+	printf("  range: %.6f\n", stats.maximum - stats.minimum);
+	printf("  stdev: %.6f (%.2f%%)\n", stats.stdev, 100 * stats.stdev / stats.mean);
+}
 
 static char auxv[4096];
 
