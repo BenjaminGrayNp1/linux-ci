@@ -102,6 +102,18 @@ config GENERIC_HWEIGHT
 	bool
 	default y
 
+config TOOLCHAIN_SUPPORTS_LOCALENTRY1
+	bool
+	depends on PPC64_ELF_ABI_V2
+	default y if LD_VERSION >= 23200 || LLD_VERSION >= 110000
+	help
+	  A section of the ELF symbol st_other field can be given the value 1
+	  using the directive '.localentry NAME, 1' to mean the local and global
+	  entry points are the same, and r2 should be treated as caller-saved.
+
+	  Older versions of Clang and binutils do not recognise this form of the
+	  directive and will error if it is used.
+
 config PPC
 	bool
 	default y
@@ -249,7 +261,7 @@ config PPC
 	select HAVE_SOFTIRQ_ON_OWN_STACK
 	select HAVE_STACKPROTECTOR		if PPC32 && $(cc-option,-mstack-protector-guard=tls -mstack-protector-guard-reg=r2)
 	select HAVE_STACKPROTECTOR		if PPC64 && $(cc-option,-mstack-protector-guard=tls -mstack-protector-guard-reg=r13)
-	select HAVE_STATIC_CALL			if PPC32
+	select HAVE_STATIC_CALL			if PPC32 || (PPC64_ELF_ABI_V2 && TOOLCHAIN_SUPPORTS_LOCALENTRY1)
 	select HAVE_SYSCALL_TRACEPOINTS
 	select HAVE_VIRT_CPU_ACCOUNTING
 	select HUGETLB_PAGE_SIZE_VARIABLE	if PPC_BOOK3S_64 && HUGETLB_PAGE
