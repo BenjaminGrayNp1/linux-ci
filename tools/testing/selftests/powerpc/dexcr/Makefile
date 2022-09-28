@@ -4,4 +4,4 @@ TEST_FILES := settings
 top_srcdir = ../../../../..
 include ../../lib.mk
 
-$(OUTPUT)/dexcr-cntrls: LDFLAGS += -lcap
+$(OUTPUT)/dexcr-cntrls: LDLIBS += -lcap
