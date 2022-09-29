@@ -28,6 +28,7 @@ static int __init dexcr_init(void)
 	int cpu;
 	u64 dexcr;
 
+	// TODO is this an issue for P10 DD1?
 	if (early_cpu_has_feature(CPU_FTR_ARCH_31)) {
 		dexcr = mfspr(SPRN_DEXCR);
 		for_each_possible_cpu(cpu)
