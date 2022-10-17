@@ -186,6 +186,8 @@ static int do_patch_instruction(u32 *addr, ppc_inst_t instr)
 	err = __do_patch_instruction(addr, instr);
 	local_irq_restore(flags);
 
+	WARN_ON(!err && !ppc_inst_equal(instr, ppc_inst_read(addr)));
+
 	return err;
 }
 #else /* !CONFIG_STRICT_KERNEL_RWX */
