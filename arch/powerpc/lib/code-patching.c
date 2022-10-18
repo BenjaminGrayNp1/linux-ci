@@ -48,10 +48,16 @@ int raw_patch_instruction(u32 *addr, ppc_inst_t instr)
 
 #ifdef CONFIG_STRICT_KERNEL_RWX
 
-static DEFINE_PER_CPU(struct vm_struct *, text_poke_area);
-static DEFINE_PER_CPU(struct mm_struct *, cpu_patching_mm);
-static DEFINE_PER_CPU(unsigned long, cpu_patching_addr);
-static DEFINE_PER_CPU(pte_t *, cpu_patching_pte);
+struct patch_context {
+	union {
+		struct vm_struct *text_poke_area;
+		struct mm_struct *mm;
+	};
+	unsigned long addr;
+	pte_t * pte;
+};
+
+static DEFINE_PER_CPU(struct patch_context, cpu_patching_context);
 
 static int map_patch_area(void *addr, unsigned long text_poke_addr);
 static void unmap_patch_area(unsigned long addr);
@@ -116,15 +122,19 @@ static int text_area_cpu_up(unsigned int cpu)
 
 	unmap_patch_area(addr);
 
-	this_cpu_write(text_poke_area, area);
+	this_cpu_write(cpu_patching_context.text_poke_area, area);
+	this_cpu_write(cpu_patching_context.addr, addr);
+	this_cpu_write(cpu_patching_context.pte, virt_to_kpte(addr));
 
 	return 0;
 }
 
 static int text_area_cpu_down(unsigned int cpu)
 {
-	free_vm_area(this_cpu_read(text_poke_area));
-	this_cpu_write(text_poke_area, NULL);
+	free_vm_area(this_cpu_read(cpu_patching_context.text_poke_area));
+	this_cpu_write(cpu_patching_context.text_poke_area, NULL);
+	this_cpu_write(cpu_patching_context.addr, 0);
+	this_cpu_write(cpu_patching_context.pte, NULL);
 	return 0;
 }
 
@@ -172,9 +182,9 @@ static int text_area_cpu_up_mm(unsigned int cpu)
 	if (WARN_ON(!ptep))
 		goto fail_no_pte;
 
-	this_cpu_write(cpu_patching_mm, mm);
-	this_cpu_write(cpu_patching_addr, addr);
-	this_cpu_write(cpu_patching_pte, ptep);
+	this_cpu_write(cpu_patching_context.mm, mm);
+	this_cpu_write(cpu_patching_context.addr, addr);
+	this_cpu_write(cpu_patching_context.pte, ptep);
 
 	return 0;
 
@@ -202,8 +212,8 @@ static int text_area_cpu_down_mm(unsigned int cpu)
 	p4d_t *p4dp;
 	pgd_t *pgdp;
 
-	mm = this_cpu_read(cpu_patching_mm);
-	addr = this_cpu_read(cpu_patching_addr);
+	mm = this_cpu_read(cpu_patching_context.mm);
+	addr = this_cpu_read(cpu_patching_context.addr);
 
 	pgdp = pgd_offset(mm, addr);
 	p4dp = p4d_offset(pgdp, addr);
@@ -223,9 +233,9 @@ static int text_area_cpu_down_mm(unsigned int cpu)
 
 	mmput(mm);
 
-	this_cpu_write(cpu_patching_mm, NULL);
-	this_cpu_write(cpu_patching_addr, 0);
-	this_cpu_write(cpu_patching_pte, NULL);
+	this_cpu_write(cpu_patching_context.mm, NULL);
+	this_cpu_write(cpu_patching_context.addr, 0);
+	this_cpu_write(cpu_patching_context.pte, NULL);
 
 	return 0;
 }
@@ -316,9 +326,9 @@ static int __do_patch_instruction_mm(u32 *addr, ppc_inst_t instr)
 	struct mm_struct *patching_mm;
 	struct mm_struct *orig_mm;
 
-	patching_mm = __this_cpu_read(cpu_patching_mm);
-	pte = __this_cpu_read(cpu_patching_pte);
-	text_poke_addr = __this_cpu_read(cpu_patching_addr);
+	patching_mm = __this_cpu_read(cpu_patching_context.mm);
+	pte = __this_cpu_read(cpu_patching_context.pte);
+	text_poke_addr = __this_cpu_read(cpu_patching_context.addr);
 	patch_addr = (u32 *)(text_poke_addr + offset_in_page(addr));
 
 	if (unlikely(!patching_mm))
@@ -357,19 +367,17 @@ static int __do_patch_instruction(u32 *addr, ppc_inst_t instr)
 {
 	int err;
 	u32 *patch_addr;
-	struct vm_struct *area;
 	unsigned long text_poke_addr;
 	pte_t *pte;
 	unsigned long pfn = get_patch_pfn(addr);
 
-	area = __this_cpu_read(text_poke_area);
-	if (unlikely(!area))
-		return -ENOMEM;
-
-	text_poke_addr = (unsigned long)area->addr & PAGE_MASK;
+	text_poke_addr = (unsigned long)__this_cpu_read(cpu_patching_context.addr) & PAGE_MASK;
 	patch_addr = (u32 *)(text_poke_addr + offset_in_page(addr));
 
-	pte = virt_to_kpte(text_poke_addr);
+	if (unlikely(!text_poke_addr))
+		return -ENOMEM;
+
+	pte = __this_cpu_read(cpu_patching_context.pte);
 	__set_pte_at(&init_mm, text_poke_addr, pte, pfn_pte(pfn, PAGE_KERNEL), 0);
 	/* See ptesync comment in radix__set_pte_at() */
 	if (radix_enabled())
