@@ -122,6 +122,7 @@ static int text_area_cpu_up(unsigned int cpu)
 	unmap_patch_area(addr);
 
 	this_cpu_write(text_poke_area, area);
+	this_cpu_write(cpu_patching_addr, addr);
 
 	return 0;
 }
@@ -365,7 +366,7 @@ static int __do_patch_instruction(u32 *addr, ppc_inst_t instr)
 	pte_t *pte;
 	unsigned long pfn = get_patch_pfn(addr);
 
-	text_poke_addr = (unsigned long)__this_cpu_read(text_poke_area)->addr & PAGE_MASK;
+	text_poke_addr = (unsigned long)__this_cpu_read(cpu_patching_addr) & PAGE_MASK;
 	patch_addr = (u32 *)(text_poke_addr + offset_in_page(addr));
 
 	pte = virt_to_kpte(text_poke_addr);
