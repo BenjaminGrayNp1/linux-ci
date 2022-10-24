@@ -44,6 +44,12 @@ static inline void local_flush_tlb_page(struct vm_area_struct *vma, unsigned lon
 	asm volatile ("tlbie %0; sync" : : "r" (vmaddr) : "memory");
 }
 
+static inline void local_flush_tlb_page_psize(struct mm_struct *mm,
+					      unsigned long vmaddr, int psize)
+{
+	asm volatile ("tlbie %0; sync" : : "r" (vmaddr) : "memory");
+}
+
 static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end)
 {
 	start &= PAGE_MASK;
@@ -57,6 +63,7 @@ static inline void flush_tlb_kernel_range(unsigned long start, unsigned long end
 void flush_tlb_kernel_range(unsigned long start, unsigned long end);
 void local_flush_tlb_mm(struct mm_struct *mm);
 void local_flush_tlb_page(struct vm_area_struct *vma, unsigned long vmaddr);
+void local_flush_tlb_page_psize(struct mm_struct *mm, unsigned long vmaddr, int psize);
 
 void __local_flush_tlb_page(struct mm_struct *mm, unsigned long vmaddr,
 			    int tsize, int ind);
