@@ -76,6 +76,7 @@ static int text_area_cpu_up(unsigned int cpu)
 static int text_area_cpu_down(unsigned int cpu)
 {
 	free_vm_area(this_cpu_read(text_poke_area));
+	this_cpu_write(text_poke_area, NULL);
 	return 0;
 }
 
@@ -151,11 +152,16 @@ static int __do_patch_instruction(u32 *addr, ppc_inst_t instr)
 {
 	int err;
 	u32 *patch_addr;
+	struct vm_struct *area;
 	unsigned long text_poke_addr;
 	pte_t *pte;
 	unsigned long pfn = get_patch_pfn(addr);
 
-	text_poke_addr = (unsigned long)__this_cpu_read(text_poke_area)->addr & PAGE_MASK;
+	area = __this_cpu_read(text_poke_area);
+	if (unlikely(!area))
+		return -ENOMEM;
+
+	text_poke_addr = (unsigned long)area->addr & PAGE_MASK;
 	patch_addr = (u32 *)(text_poke_addr + offset_in_page(addr));
 
 	pte = virt_to_kpte(text_poke_addr);
