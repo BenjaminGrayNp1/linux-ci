@@ -21,6 +21,8 @@
 #define DEXCR_PRO_SRAPD		DEXCR_PRO_MASK(4)
 #define DEXCR_PRO_NPHIE		DEXCR_PRO_MASK(5)
 
+#define SYSCTL_DEXCR_SBHE	"/proc/sys/kernel/speculative_branch_hint_enable"
+
 enum DexcrSource {
 	UDEXCR,		/* Userspace DEXCR value */
 	ENFORCED,	/* Enforced by hypervisor */
