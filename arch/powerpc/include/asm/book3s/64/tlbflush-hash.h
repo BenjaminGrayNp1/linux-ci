@@ -22,7 +22,7 @@ struct ppc64_tlb_batch {
 };
 DECLARE_PER_CPU(struct ppc64_tlb_batch, ppc64_tlb_batch);
 
-extern void __flush_tlb_pending(struct ppc64_tlb_batch *batch);
+void __flush_tlb_pending(struct ppc64_tlb_batch *batch);
 
 #define __HAVE_ARCH_ENTER_LAZY_MMU_MODE
 
@@ -51,14 +51,13 @@ static inline void arch_leave_lazy_mmu_mode(void)
 
 #define arch_flush_lazy_mmu_mode()      do {} while (0)
 
-extern void hash__tlbiel_all(unsigned int action);
+void hash__tlbiel_all(unsigned int action);
 
-extern void flush_hash_page(unsigned long vpn, real_pte_t pte, int psize,
-			    int ssize, unsigned long flags);
-extern void flush_hash_range(unsigned long number, int local);
-extern void flush_hash_hugepage(unsigned long vsid, unsigned long addr,
-				pmd_t *pmdp, unsigned int psize, int ssize,
-				unsigned long flags);
+void flush_hash_page(unsigned long vpn, real_pte_t pte, int psize, int ssize,
+		     unsigned long flags);
+void flush_hash_range(unsigned long number, int local);
+void flush_hash_hugepage(unsigned long vsid, unsigned long addr, pmd_t *pmdp,
+			 unsigned int psize, int ssize, unsigned long flags);
 static inline void hash__local_flush_tlb_mm(struct mm_struct *mm)
 {
 }
@@ -111,11 +110,11 @@ static inline void hash__flush_tlb_kernel_range(unsigned long start,
 
 
 struct mmu_gather;
-extern void hash__tlb_flush(struct mmu_gather *tlb);
+void hash__tlb_flush(struct mmu_gather *tlb);
 
 #ifdef CONFIG_PPC_64S_HASH_MMU
 /* Private function for use by PCI IO mapping code */
-extern void __flush_hash_table_range(unsigned long start, unsigned long end);
+void __flush_hash_table_range(unsigned long start, unsigned long end);
 void flush_hash_table_pmd_range(struct mm_struct *mm, pmd_t *pmd, unsigned long addr);
 #else
 static inline void __flush_hash_table_range(unsigned long start, unsigned long end) { }
