@@ -1825,6 +1825,12 @@ int copy_thread(struct task_struct *p, const struct kernel_clone_args *args)
 #ifdef CONFIG_PPC_BOOK3S_64
 	if (cpu_has_feature(CPU_FTR_DEXCR_NPHIE))
 		p->thread.hashkeyr = current->thread.hashkeyr;
+
+	if (cpu_has_feature(CPU_FTR_ARCH_31)) {
+		p->thread.dexcr_override = current->thread.dexcr_override;
+		p->thread.dexcr_mask = current->thread.dexcr_mask;
+		p->thread.dexcr_forced = current->thread.dexcr_forced;
+	}
 #endif
 	/*
 	 * Run with the current AMR value of the kernel
