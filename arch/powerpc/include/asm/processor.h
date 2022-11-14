@@ -446,6 +446,19 @@ int exit_vmx_usercopy(void);
 int enter_vmx_ops(void);
 void *exit_vmx_ops(void *dest);
 
+#ifdef CONFIG_PPC_BOOK3S_64
+
+unsigned long get_thread_dexcr(struct thread_struct const *t);
+
+#else
+
+static inline unsigned long get_thread_dexcr(struct thread_struct const *t)
+{
+	return 0;
+}
+
+#endif /* CONFIG_PPC_BOOK3S_64 */
+
 #endif /* __KERNEL__ */
 #endif /* __ASSEMBLY__ */
 #endif /* _ASM_POWERPC_PROCESSOR_H */

@@ -1228,6 +1228,13 @@ static inline void restore_sprs(struct thread_struct *old_thread,
 	if (cpu_has_feature(CPU_FTR_P9_TIDR) &&
 	    old_thread->tidr != new_thread->tidr)
 		mtspr(SPRN_TIDR, new_thread->tidr);
+
+	if (cpu_has_feature(CPU_FTR_ARCH_31)) {
+		unsigned long new_dexcr = get_thread_dexcr(new_thread);
+
+		if (new_dexcr != get_thread_dexcr(old_thread))
+			mtspr(SPRN_DEXCR, new_dexcr);
+	}
 #endif
 
 }
@@ -1802,7 +1809,7 @@ int copy_thread(struct task_struct *p, const struct kernel_clone_args *args)
 
 	setup_ksp_vsid(p, sp);
 
-#ifdef CONFIG_PPC64 
+#ifdef CONFIG_PPC64
 	if (cpu_has_feature(CPU_FTR_DSCR)) {
 		p->thread.dscr_inherit = current->thread.dscr_inherit;
 		p->thread.dscr = mfspr(SPRN_DSCR);
@@ -1939,6 +1946,10 @@ void start_thread(struct pt_regs *regs, unsigned long start, unsigned long sp)
 	current->thread.tm_tfiar = 0;
 	current->thread.load_tm = 0;
 #endif /* CONFIG_PPC_TRANSACTIONAL_MEM */
+#ifdef CONFIG_PPC_BOOK3S_64
+	if (cpu_has_feature(CPU_FTR_ARCH_31))
+		mtspr(SPRN_DEXCR, get_thread_dexcr(&current->thread));
+#endif /* CONFIG_PPC_BOOK3S_64 */
 }
 EXPORT_SYMBOL(start_thread);
 
