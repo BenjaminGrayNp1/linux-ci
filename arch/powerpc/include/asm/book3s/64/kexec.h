@@ -24,6 +24,9 @@ static inline void reset_sprs(void)
 	if (cpu_has_feature(CPU_FTR_ARCH_31))
 		mtspr(SPRN_DEXCR, 0);
 
+	if (cpu_has_feature(CPU_FTR_DEXCR_NPHIE))
+		mtspr(SPRN_HASHKEYR, 0);
+
 	/*  Do we need isync()? We are going via a kexec reset */
 	isync();
 }

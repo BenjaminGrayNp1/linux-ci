@@ -384,6 +384,7 @@
 #define SPRN_HRMOR	0x139	/* Real mode offset register */
 #define SPRN_HSRR0	0x13A	/* Hypervisor Save/Restore 0 */
 #define SPRN_HSRR1	0x13B	/* Hypervisor Save/Restore 1 */
+#define SPRN_HASHKEYR	0x1D4	/* Non-privileged hashst/hashchk key register */
 #define SPRN_ASDR	0x330	/* Access segment descriptor register */
 #define SPRN_DEXCR	0x33C	/* Dynamic execution control register */
 #define   DEXCR_PRO_MASK(aspect)	__MASK(63 - (32 + (aspect)))	/* Aspect number to problem state aspect mask */
