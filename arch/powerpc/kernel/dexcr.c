@@ -2,6 +2,7 @@
 #include <linux/capability.h>
 #include <linux/cpu.h>
 #include <linux/init.h>
+#include <linux/kconfig.h>
 #include <linux/prctl.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
@@ -18,8 +19,8 @@
 #define DEFAULT_DEXCR	0
 
 /* Allow process configuration of these by default */
-#define DEXCR_PRCTL_EDITABLE (DEXCR_PRO_SBHE | DEXCR_PRO_IBRTPD | \
-			      DEXCR_PRO_SRAPD | DEXCR_PRO_NPHIE)
+static unsigned long dexcr_prctl_editable __ro_after_init =
+	DEXCR_PRO_SBHE | DEXCR_PRO_IBRTPD | DEXCR_PRO_SRAPD | DEXCR_PRO_NPHIE;
 
 /*
  * Lock to protect system DEXCR override from concurrent updates.
@@ -83,6 +84,12 @@ static int __init dexcr_init(void)
 	if (early_cpu_has_feature(CPU_FTR_DEXCR_SBHE))
 		update_userspace_system_dexcr(DEXCR_PRO_SBHE, spec_branch_hint_enable);
 
+	if (early_cpu_has_feature(CPU_FTR_DEXCR_NPHIE) &&
+	    IS_ENABLED(CONFIG_PPC_USER_ROP_PROTECT)) {
+		update_userspace_system_dexcr(DEXCR_PRO_NPHIE, 1);
+		dexcr_prctl_editable &= ~DEXCR_PRO_NPHIE;
+	}
+
 	return 0;
 }
 early_initcall(dexcr_init);
@@ -131,7 +138,7 @@ static int dexcr_aspect_get(struct task_struct *task, unsigned int aspect)
 {
 	int ret = 0;
 
-	if (aspect & DEXCR_PRCTL_EDITABLE)
+	if (aspect & dexcr_prctl_editable)
 		ret |= PR_PPC_DEXCR_PRCTL;
 
 	if (aspect & task->thread.dexcr_mask) {
@@ -174,7 +181,7 @@ int dexcr_prctl_get(struct task_struct *task, unsigned long which)
 
 static int dexcr_aspect_set(struct task_struct *task, unsigned int aspect, unsigned long ctrl)
 {
-	if (!(aspect & DEXCR_PRCTL_EDITABLE))
+	if (!(aspect & dexcr_prctl_editable))
 		return -ENXIO;  /* Aspect is not allowed to be changed by prctl */
 
 	if (aspect & task->thread.dexcr_forced)
