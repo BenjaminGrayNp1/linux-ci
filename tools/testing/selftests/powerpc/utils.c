@@ -162,6 +162,68 @@ define_parse_number(parse_long, long, intmax_t);
 define_parse_number(parse_uint, unsigned int, uintmax_t);
 define_parse_number(parse_ulong, unsigned long, uintmax_t);
 
+int read_long(const char *path, long *result, int base)
+{
+	int err;
+	char buffer[32] = {0};
+
+	if ((err = read_file(path, buffer, sizeof(buffer) - 1, NULL)))
+		return err;
+
+	return parse_long(buffer, sizeof(buffer), result, base);
+}
+
+int read_ulong(const char *path, unsigned long *result, int base)
+{
+	int err;
+	char buffer[32] = {0};
+
+	if ((err = read_file(path, buffer, sizeof(buffer) - 1, NULL)))
+		return err;
+
+	return parse_ulong(buffer, sizeof(buffer), result, base);
+}
+
+int write_long(const char *path, long result, int base)
+{
+	int len;
+	char buffer[32];
+
+	/* Decimal only; we don't have a format specifier for signed hex values */
+	if (base != 10)
+		return EINVAL;
+
+	len = snprintf(buffer, sizeof(buffer), "%ld", result);
+	if (len < 0 || len >= sizeof(buffer))
+		return EOVERFLOW;
+
+	return write_file(path, buffer, len);
+}
+
+int write_ulong(const char *path, unsigned long result, int base)
+{
+	int len;
+	char buffer[32];
+	char *fmt;
+
+	switch (base) {
+	case 10:
+		fmt = "%lu";
+		break;
+	case 16:
+		fmt = "%lx";
+		break;
+	default:
+		return EINVAL;
+	}
+
+	len = snprintf(buffer, sizeof(buffer), fmt, result);
+	if (len < 0 || len >= sizeof(buffer))
+		return -1;
+
+	return write_file(path, buffer, len);
+}
+
 void *find_auxv_entry(int type, char *auxv)
 {
 	ElfW(auxv_t) *p;
