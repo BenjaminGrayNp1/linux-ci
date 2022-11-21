@@ -64,48 +64,30 @@ inline void set_dscr_usr(unsigned long val)
 /* Default DSCR access */
 unsigned long get_default_dscr(void)
 {
-	int fd = -1, ret;
-	char buf[16];
+	int err;
+	char buf[16] = {0};
 	unsigned long val;
 
-	if (fd == -1) {
-		fd = open(DSCR_DEFAULT, O_RDONLY);
-		if (fd == -1) {
-			perror("open() failed");
-			exit(1);
-		}
-	}
-	memset(buf, 0, sizeof(buf));
-	lseek(fd, 0, SEEK_SET);
-	ret = read(fd, buf, sizeof(buf));
-	if (ret == -1) {
-		perror("read() failed");
+	if ((err = read_file(DSCR_DEFAULT, buf, sizeof(buf) - 1, NULL))) {
+		fprintf(stderr, "get_default_dscr() read failed: %s\n", strerror(err));
 		exit(1);
 	}
+
 	sscanf(buf, "%lx", &val);
-	close(fd);
 	return val;
 }
 
 void set_default_dscr(unsigned long val)
 {
-	int fd = -1, ret;
+	int err;
 	char buf[16];
 
-	if (fd == -1) {
-		fd = open(DSCR_DEFAULT, O_RDWR);
-		if (fd == -1) {
-			perror("open() failed");
-			exit(1);
-		}
-	}
 	sprintf(buf, "%lx\n", val);
-	ret = write(fd, buf, strlen(buf));
-	if (ret == -1) {
-		perror("write() failed");
+
+	if ((err = write_file(DSCR_DEFAULT, buf, strlen(buf)))) {
+		fprintf(stderr, "set_default_dscr() write failed: %s\n", strerror(err));
 		exit(1);
 	}
-	close(fd);
 }
 
 double uniform_deviate(int seed)
