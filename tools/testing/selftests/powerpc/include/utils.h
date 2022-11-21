@@ -33,6 +33,11 @@ void *get_auxv_entry(int type);
 
 int pick_online_cpu(void);
 
+int parse_int(const char *buffer, size_t count, int *result, int base);
+int parse_long(const char *buffer, size_t count, long *result, int base);
+int parse_uint(const char *buffer, size_t count, unsigned int *result, int base);
+int parse_ulong(const char *buffer, size_t count, unsigned long *result, int base);
+
 int read_file(const char *path, char *buf, size_t count, size_t *len);
 int write_file(const char *path, const char *buf, size_t count);
 int read_debugfs_file(const char *debugfs_file, char *buf, size_t count);
