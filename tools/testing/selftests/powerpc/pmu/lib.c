@@ -192,16 +192,15 @@ bool require_paranoia_below(int level)
 {
 	int err;
 	long current;
-	char *end, buf[16];
+	char buf[16] = {0};
+	char *end;
 
-	if ((err = read_file(PARANOID_PATH, buf, sizeof(buf), NULL))) {
+	if ((err = read_file(PARANOID_PATH, buf, sizeof(buf) - 1, NULL))) {
 		printf("Couldn't read " PARANOID_PATH "?\n");
 		return false;
 	}
 
-	current = strtol(buf, &end, 10);
-
-	if (end == buf) {
+	if ((err = parse_long(buf, sizeof(buf), &current, 10))) {
 		printf("Couldn't parse " PARANOID_PATH "?\n");
 		return false;
 	}

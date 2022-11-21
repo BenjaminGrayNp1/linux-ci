@@ -8,6 +8,8 @@
 #include <elf.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
+#include <limits.h>
 #include <link.h>
 #include <sched.h>
 #include <stdio.h>
@@ -113,6 +115,53 @@ int write_debugfs_file(const char *subpath, const char *buf, size_t count)
 	return write_file(path, buf, count);
 }
 
+#define TYPE_MIN(x)				\
+	_Generic((x),				\
+		int:		INT_MIN,	\
+		long:		LONG_MIN,	\
+		unsigned int:	0,		\
+		unsigned long:	0)
+
+#define TYPE_MAX(x)				\
+	_Generic((x),				\
+		int:		INT_MAX,	\
+		long:		LONG_MAX,	\
+		unsigned int:	INT_MAX,	\
+		unsigned long:	LONG_MAX)
+
+#define define_parse_number(fn, type, super_type)				\
+	int fn(const char *buffer, size_t count, type *result, int base)	\
+	{									\
+		char *end;							\
+		super_type parsed;						\
+										\
+		errno = 0;							\
+		parsed = _Generic(parsed,					\
+				  intmax_t:	strtoimax,			\
+				  uintmax_t:	strtoumax)(buffer, &end, base);	\
+										\
+		if (errno == ERANGE ||						\
+		    parsed < TYPE_MIN(*result) || parsed > TYPE_MAX(*result))	\
+			return ERANGE;						\
+										\
+		/* Require at least one digit */				\
+		if (end == buffer)						\
+			return EINVAL;						\
+										\
+		/* Require all remaining characters be whitespace-ish */	\
+		for (; end < buffer + count; end++)				\
+			if (!(*end == ' ' || *end == '\n' || *end == '\0'))	\
+				return EINVAL;					\
+										\
+		*result = parsed;						\
+		return 0;							\
+	}
+
+define_parse_number(parse_int, int, intmax_t);
+define_parse_number(parse_long, long, intmax_t);
+define_parse_number(parse_uint, unsigned int, uintmax_t);
+define_parse_number(parse_ulong, unsigned long, uintmax_t);
+
 void *find_auxv_entry(int type, char *auxv)
 {
 	ElfW(auxv_t) *p;
@@ -213,9 +262,7 @@ int read_debugfs_int(const char *debugfs_file, int *result)
 	if ((err = read_debugfs_file(debugfs_file, value, sizeof(value) - 1)))
 		return err;
 
-	*result = atoi(value);
-
-	return 0;
+	return parse_int(value, sizeof(value), result, 10);
 }
 
 int write_debugfs_int(const char *debugfs_file, int result)
