@@ -12,23 +12,12 @@
 
 static int check_cpu_dscr_default(char *file, unsigned long val)
 {
-	char buf[10];
-	int fd, rc;
+	char buf[10] = {0};
+	int rc;
 
-	fd = open(file, O_RDWR);
-	if (fd == -1) {
-		perror("open() failed");
-		return 1;
-	}
+	if ((rc = read_file(file, buf, sizeof(buf) - 1, NULL)))
+		return rc;
 
-	rc = read(fd, buf, sizeof(buf));
-	if (rc == -1) {
-		perror("read() failed");
-		return 1;
-	}
-	close(fd);
-
-	buf[rc] = '\0';
 	if (strtol(buf, NULL, 16) != val) {
 		printf("DSCR match failed: %ld (system) %ld (cpu)\n",
 					val, strtol(buf, NULL, 16));

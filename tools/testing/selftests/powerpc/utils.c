@@ -26,34 +26,73 @@
 
 static char auxv[4096];
 
-int read_auxv(char *buf, ssize_t buf_size)
+int read_file(const char *path, char *buf, size_t count, size_t *len)
 {
-	ssize_t num;
-	int rc, fd;
+	ssize_t rc;
+	int fd;
+	int err;
+	char eof;
 
-	fd = open("/proc/self/auxv", O_RDONLY);
-	if (fd == -1) {
-		perror("open");
-		return -errno;
-	}
+	if ((fd = open(path, O_RDONLY)) < 0)
+		return errno;
 
-	num = read(fd, buf, buf_size);
-	if (num < 0) {
-		perror("read");
-		rc = -EIO;
+	if ((rc = read(fd, buf, count)) < 0) {
+		err = errno;
 		goto out;
 	}
 
-	if (num > buf_size) {
-		printf("overflowed auxv buffer\n");
-		rc = -EOVERFLOW;
+	if (len)
+		*len = rc;
+
+	/* Overflow if there are still more bytes after filling the buffer */
+	if (rc == count && (rc = read(fd, &eof, 1)) != 0) {
+		err = EOVERFLOW;
 		goto out;
 	}
 
-	rc = 0;
+	err = 0;
+
 out:
 	close(fd);
-	return rc;
+	return err;
+}
+
+int write_file(const char *path, const char *buf, size_t count)
+{
+	int fd;
+	int err;
+	ssize_t rc;
+
+	if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC)) < 0)
+		return errno;
+
+	if ((rc = write(fd, buf, count)) < 0) {
+		err = errno;
+		goto out;
+	}
+
+	if (rc != count) {
+		err = EOVERFLOW;
+		goto out;
+	}
+
+	err = 0;
+
+out:
+	close(fd);
+	return err;
+}
+
+int read_auxv(char *buf, ssize_t buf_size)
+{
+	int err;
+
+	if ((err = read_file("/proc/self/auxv", buf, buf_size, NULL))) {
+		fprintf(stderr, "Error reading auxv: %s\n", strerror(err));
+		return err;
+	}
+
+	return 0;
 }
 
 void *find_auxv_entry(int type, char *auxv)
@@ -142,65 +181,40 @@ bool is_ppc64le(void)
 int read_sysfs_file(char *fpath, char *result, size_t result_size)
 {
 	char path[PATH_MAX] = "/sys/";
-	int rc = -1, fd;
 
 	strncat(path, fpath, PATH_MAX - strlen(path) - 1);
 
-	if ((fd = open(path, O_RDONLY)) < 0)
-		return rc;
-
-	rc = read(fd, result, result_size);
-
-	close(fd);
-
-	if (rc < 0)
-		return rc;
-
-	return 0;
+	return read_file(path, result, result_size, NULL);
 }
 
 int read_debugfs_file(char *debugfs_file, int *result)
 {
-	int rc = -1, fd;
+	int err;
 	char path[PATH_MAX];
-	char value[16];
+	char value[16] = {0};
 
 	strcpy(path, "/sys/kernel/debug/");
 	strncat(path, debugfs_file, PATH_MAX - strlen(path) - 1);
 
-	if ((fd = open(path, O_RDONLY)) < 0)
-		return rc;
+	if ((err = read_file(path, value, sizeof(value) - 1, NULL)))
+		return err;
 
-	if ((rc = read(fd, value, sizeof(value))) < 0)
-		return rc;
-
-	value[15] = 0;
 	*result = atoi(value);
-	close(fd);
 
 	return 0;
 }
 
 int write_debugfs_file(char *debugfs_file, int result)
 {
-	int rc = -1, fd;
 	char path[PATH_MAX];
 	char value[16];
 
 	strcpy(path, "/sys/kernel/debug/");
 	strncat(path, debugfs_file, PATH_MAX - strlen(path) - 1);
 
-	if ((fd = open(path, O_WRONLY)) < 0)
-		return rc;
-
 	snprintf(value, 16, "%d", result);
 
-	if ((rc = write(fd, value, strlen(value))) < 0)
-		return rc;
-
-	close(fd);
-
-	return 0;
+	return write_file(path, value, strlen(value));
 }
 
 static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
