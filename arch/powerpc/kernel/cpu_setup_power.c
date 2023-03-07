@@ -10,6 +10,7 @@
 #include <asm/reg.h>
 #include <asm/synch.h>
 #include <linux/bitops.h>
+#include <linux/kconfig.h>
 #include <asm/cputable.h>
 #include <asm/cpu_setup.h>
 
@@ -128,7 +129,7 @@ static void init_PMU_ISA31(void)
 
 static void init_DEXCR(void)
 {
-	mtspr(SPRN_DEXCR, 0);
+	mtspr(SPRN_DEXCR, CONFIG_PPC_DEXCR_DEFAULT);
 	mtspr(SPRN_HASHKEYR, 0);
 }
 
