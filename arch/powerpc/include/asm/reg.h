@@ -388,11 +388,28 @@
 #define SPRN_DEXCR_RO	0x32C	/* DEXCR (non-privileged, readonly) */
 #define SPRN_ASDR	0x330	/* Access segment descriptor register */
 #define SPRN_DEXCR	0x33C	/* Dynamic execution control register */
-#define   DEXCR_PR_SBHE	  0x80000000UL /* 0: Speculative Branch Hint Enable */
-#define   DEXCR_PR_IBRTPD 0x10000000UL /* 3: Indirect Branch Recurrent Target Prediction Disable */
-#define   DEXCR_PR_SRAPD  0x08000000UL /* 4: Subroutine Return Address Prediction Disable */
-#define   DEXCR_PR_NPHIE  0x04000000UL /* 5: Non-Privileged Hash Instruction Enable */
-#define   DEXCR_INIT	DEXCR_PR_NPHIE	/* Fixed DEXCR value to initialise all CPUs with */
+#define   DEXCR_PR_SBHE	  0x80000000UL /* 0: (user) Speculative Branch Hint Enable */
+#define   DEXCR_PR_IBRTPD 0x10000000UL /* 3: (user) Indirect Branch Recurrent Target Prediction Disable */
+#define   DEXCR_PR_SRAPD  0x08000000UL /* 4: (user) Subroutine Return Address Prediction Disable */
+#define   DEXCR_PR_NPHIE  0x04000000UL /* 5: (user) Non-Privileged Hash Instruction Enable */
+#define   DEXCR_PR_PHIE   0x02000000UL /* 6: (user) Privileged Hash Instruction Enable */
+#define   DEXCR_PR_ALL (DEXCR_PR_SBHE | \
+			DEXCR_PR_IBRTPD | \
+			DEXCR_PR_SRAPD | \
+			DEXCR_PR_NPHIE | \
+			DEXCR_PR_PHIE)
+#define   DEXCR_PNH_SBHE   0x8000000000000000UL /* 0: (kernel) Speculative Branch Hint Enable */
+#define   DEXCR_PNH_IBRTPD 0x1000000000000000UL /* 3: (kernel) Indirect Branch Recurrent Target Prediction Disable */
+#define   DEXCR_PNH_SRAPD  0x0800000000000000UL /* 4: (kernel) Subroutine Return Address Prediction Disable */
+#define   DEXCR_PNH_NPHIE  0x0400000000000000UL /* 5: (kernel) Non-Privileged Hash Instruction Enable */
+#define   DEXCR_PNH_PHIE   0x0200000000000000UL /* 6: (kernel) Privileged Hash Instruction Enable */
+#define   DEXCR_PNH_ALL (DEXCR_PNH_SBHE | \
+			 DEXCR_PNH_IBRTPD | \
+			 DEXCR_PNH_SRAPD | \
+			 DEXCR_PNH_NPHIE | \
+			 DEXCR_PNH_PHIE)
+#define   DEXCR_ALL	(DEXCR_PR_ALL | DEXCR_PNH_ALL)
+#define   DEXCR_INIT	DEXCR_PR_NPHIE	/* Fixed DEXCR value to use for first task */
 #define SPRN_IC		0x350	/* Virtual Instruction Count */
 #define SPRN_VTB	0x351	/* Virtual Time Base */
 #define SPRN_LDBAR	0x352	/* LD Base Address Register */
