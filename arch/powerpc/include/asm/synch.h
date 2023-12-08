@@ -25,6 +25,12 @@ static inline void isync(void)
 	__asm__ __volatile__ ("isync" : : : "memory");
 }
 
+/* Speculative execution barrier since ISA v3.1 (NOP on earlier platforms) */
+static inline void exser(void)
+{
+	__asm__ __volatile__ ("ori 31,31,0" : : : "memory");
+}
+
 static inline void ppc_after_tlbiel_barrier(void)
 {
 	asm volatile("ptesync": : :"memory");
