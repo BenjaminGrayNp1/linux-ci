@@ -409,7 +409,8 @@
 			 DEXCR_PNH_NPHIE | \
 			 DEXCR_PNH_PHIE)
 #define   DEXCR_ALL	(DEXCR_PR_ALL | DEXCR_PNH_ALL)
-#define   DEXCR_INIT	DEXCR_PR_NPHIE	/* Fixed DEXCR value to use for first task */
+#define   DEXCR_INIT_SET	DEXCR_PR_NPHIE	/* Initial DEXCR aspects to set */
+#define   DEXCR_INIT_CLEAR	0		/* Initial DEXCR aspects to clear */
 #define SPRN_IC		0x350	/* Virtual Instruction Count */
 #define SPRN_VTB	0x351	/* Virtual Time Base */
 #define SPRN_LDBAR	0x352	/* LD Base Address Register */

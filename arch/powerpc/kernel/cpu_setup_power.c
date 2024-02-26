@@ -128,7 +128,15 @@ static void init_PMU_ISA31(void)
 
 static void init_DEXCR(void)
 {
-	mtspr(SPRN_DEXCR, DEXCR_INIT);
+	u64 dexcr;
+
+	dexcr = mfspr(SPRN_DEXCR);
+	dexcr |= DEXCR_INIT_SET;
+	dexcr &= ~DEXCR_INIT_CLEAR;
+	mtspr(SPRN_DEXCR, dexcr);
+	isync();
+	exser();
+
 	mtspr(SPRN_HASHKEYR, 0);
 }
 
