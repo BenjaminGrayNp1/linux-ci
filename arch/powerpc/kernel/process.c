@@ -1867,7 +1867,7 @@ int copy_thread(struct task_struct *p, const struct kernel_clone_args *args)
 
 	setup_ksp_vsid(p, sp);
 
-#ifdef CONFIG_PPC64 
+#ifdef CONFIG_PPC64
 	if (cpu_has_feature(CPU_FTR_DSCR)) {
 		p->thread.dscr_inherit = current->thread.dscr_inherit;
 		p->thread.dscr = mfspr(SPRN_DSCR);
